@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenType Font Analyzer</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>OpenType font analyzer</h1>
+
+  <div class="drop" id="drop">
+    <input type="file" id="fileinput" accept=".ttf,.otf">
+    <div style="font-size:24px;margin-bottom:8px;opacity:.4">⬡</div>
+    <div style="font-weight:500;margin-bottom:4px">Drop a TTF / OTF file here</div>
+    <p>or click to browse — parsed entirely in your browser, nothing uploaded</p>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="results" style="display:none"></div>
+</div>
+
+<!--
+  Must be served from a local HTTP server (e.g. `python3 -m http.server 8080`
+  or `npx serve .`) because ES modules cannot be loaded from file:// URLs.
+-->
+<script type="module" src="js/main.mjs"></script>
+</body>
+</html>
