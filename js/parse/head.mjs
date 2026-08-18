@@ -63,43 +63,43 @@ export function longDateTimeToISO(v, off) {
  * head table layout (OpenType spec §5.2.8):
  *   +0   uint16  majorVersion  (always 1)
  *   +2   uint16  minorVersion  (always 0)
- *   +4   Fixed   fontRevision
- *   +8   uint32  checkSumAdjustment
- *   +12  uint32  magicNumber   (0x5F0F3CF5)
- *   +14  uint16  flags
- *   +16  uint16  unitsPerEm
- *   +18  LONGDATETIME  created   (8 bytes)
- *   +26  LONGDATETIME  modified  (8 bytes)
- *   +34  int16   xMin
- *   +36  int16   yMin
- *   +38  int16   xMax
- *   +40  int16   yMax
- *   +42  uint16  macStyle
- *   +44  uint16  lowestRecPPEM
- *   +46  int16   fontDirectionHint  (deprecated)
- *   +48  int16   indexToLocFormat   (0=short, 1=long)
- *   +50  int16   glyphDataFormat
+ *   +4   Fixed   fontRevision            (4 bytes)
+ *   +8   uint32  checkSumAdjustment      (4 bytes)
+ *   +12  uint32  magicNumber  0x5F0F3CF5 (4 bytes)
+ *   +16  uint16  flags                   (2 bytes)
+ *   +18  uint16  unitsPerEm              (2 bytes)
+ *   +20  LONGDATETIME  created           (8 bytes)
+ *   +28  LONGDATETIME  modified          (8 bytes)
+ *   +36  int16   xMin
+ *   +38  int16   yMin
+ *   +40  int16   xMax
+ *   +42  int16   yMax
+ *   +44  uint16  macStyle
+ *   +46  uint16  lowestRecPPEM
+ *   +48  int16   fontDirectionHint  (deprecated)
+ *   +50  int16   indexToLocFormat   (0=short, 1=long)
+ *   +52  int16   glyphDataFormat
  */
 export function parseHead(v, off) {
   if (!off) return null;
 
   const revRaw      = u32(v, off + 4);
-  const macStyleRaw = u16(v, off + 42);
+  const macStyleRaw = u16(v, off + 44);
 
   return {
     fontRevisionRaw: revRaw,
     fontRevision:    fixedToString(revRaw),
-    unitsPerEm:      u16(v, off + 16),
-    created:         longDateTimeToISO(v, off + 18),
-    modified:        longDateTimeToISO(v, off + 26),
-    xMin:            v.getInt16(off + 34, false),
-    yMin:            v.getInt16(off + 36, false),
-    xMax:            v.getInt16(off + 38, false),
-    yMax:            v.getInt16(off + 40, false),
+    unitsPerEm:      u16(v, off + 18),
+    created:         longDateTimeToISO(v, off + 20),
+    modified:        longDateTimeToISO(v, off + 28),
+    xMin:            v.getInt16(off + 36, false),
+    yMin:            v.getInt16(off + 38, false),
+    xMax:            v.getInt16(off + 40, false),
+    yMax:            v.getInt16(off + 42, false),
     macStyleRaw,
     macStyleFlags:   macStyleFlags(macStyleRaw),
-    lowestRecPPEM:   u16(v, off + 44),
-    indexToLocFormat: u16(v, off + 48) === 0 ? 'short (16-bit)' : 'long (32-bit)',
+    lowestRecPPEM:   u16(v, off + 46),
+    indexToLocFormat: u16(v, off + 50) === 0 ? 'short (16-bit)' : 'long (32-bit)',
   };
 }
 
