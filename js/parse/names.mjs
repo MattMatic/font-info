@@ -152,22 +152,32 @@ export function rebuildNameTable(origBuf, ntOff, edits) {
 // ── patch font & download ────────────────────────────────────────────────────
 
 /**
- * Apply name-table edits to the font binary, fix the table directory,
- * and trigger a browser download of the result.
+ * Apply name-table edits (and optionally a new head.fontRevision) to the
+ * font binary, fix the table directory, and trigger a browser download.
  *
  * Patching steps:
  *  1. Splice new name table bytes into a copy of the file.
  *  2. Update the name table's directory entry (checksum, length).
  *  3. If the table size changed (delta ≠ 0), shift offsets of all tables
  *     that sit after the name table in the file.
- *  4. Zero the `head` table's checkSumAdjustment field.
+ *  4. If newHeadRevision is provided, write it into head+4 (the fontRevision
+ *     Fixed 16.16 field). The head table size never changes so no offset
+ *     shuffling is needed — only the per-table checksum and the whole-file
+ *     checkSumAdjustment field need updating.
+ *  5. Zero the `head` table's checkSumAdjustment field.
  *     Rationale: correctly recomputing the whole-file checksum (0xB1B0AFBA
  *     minus Σ all table words) would require a second full-file pass.
  *     Zeroing is universally accepted — HarfBuzz, Core Text, and DirectWrite
  *     all ignore this field at runtime; it is only used by font validation
  *     tools (e.g. `checksum -f`).
+ *
+ * @param {ArrayBuffer}  origBuf
+ * @param {Object}       tablesRaw        - {tag: {off, len}} from analyzeFont
+ * @param {Object}       edits            - {nameID: newString} map
+ * @param {string}       saveAs           - download filename
+ * @param {number|null}  newHeadRevision  - new Fixed 16.16 uint32, or null
  */
-export function patchAndDownload(origBuf, tablesRaw, edits, saveAs) {
+export function patchAndDownload(origBuf, tablesRaw, edits, saveAs, newHeadRevision = null) {
   const nt = tablesRaw['name'];
   const { tbl, padLen, contentLen } = rebuildNameTable(origBuf, nt.off, edits);
 
@@ -201,15 +211,25 @@ export function patchAndDownload(origBuf, tablesRaw, edits, saveAs) {
       if (off > nt.off) s32(nv, base + 8, off + delta);
     }
   }
+  // (head checkSumAdjustment is zeroed and head checksum recomputed below)
 
-  // Zero head checkSumAdjustment when the file layout changed.
-  if (delta !== 0) {
-    for (let i = 0; i < numTbls; i++) {
-      if (str4(nv, 12 + i * 16) === 'head') {
-        s32(nv, u32(nv, 12 + i * 16 + 8) + 8, 0);
-        break;
-      }
+  // Write new head.fontRevision if requested, and update the head checksum.
+  // head table size is constant (54 bytes per spec) so no offset changes needed.
+  for (let i = 0; i < numTbls; i++) {
+    if (str4(nv, 12 + i * 16) !== 'head') continue;
+    const headOff = u32(nv, 12 + i * 16 + 8);
+    const headLen = u32(nv, 12 + i * 16 + 12);
+
+    if (newHeadRevision !== null) {
+      s32(nv, headOff + 4, newHeadRevision);
     }
+
+    // Always zero checkSumAdjustment (head+8) — valid for all rasterizers.
+    s32(nv, headOff + 8, 0);
+
+    // Recompute head table checksum in the directory.
+    s32(nv, 12 + i * 16 + 4, tableChecksum(out.buffer, headOff, headLen));
+    break;
   }
 
   // Download.

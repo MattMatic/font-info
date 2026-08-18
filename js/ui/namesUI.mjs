@@ -1,18 +1,19 @@
 import { esc, nameLabel, langLabel, platLabel } from './util.mjs';
 import { EDITABLE_NIDS, PLAT }                 from './constants.mjs';
 import { patchAndDownload }                     from '../parse/names.mjs';
+import { fixedToString }                        from '../parse/head.mjs';
 
 // ── HTML builder ─────────────────────────────────────────────────────────────
 
 /**
  * Build the full innerHTML for the names accordion body.
  *
- * @param {Object[]} nameRecs   - all name records from the font
- * @param {boolean}  editMode   - whether input fields are shown
- * @param {Object}   nameEdits  - {nameID: newString} pending edits
- * @param {string}   fileName   - original font filename (for download default)
+ * @param {Object[]} nameRecs      - all name records from the font
+ * @param {boolean}  editMode      - whether input fields are shown
+ * @param {Object}   nameEdits     - {nameID: newString} pending edits
+ * @param {string}   defaultSaveAs - pre-computed download filename
  */
-export function namesBodyHTML(nameRecs, editMode, nameEdits, fileName) {
+export function namesBodyHTML(nameRecs, editMode, nameEdits, defaultSaveAs) {
   const sorted  = [...nameRecs].sort((a, b) => a.nid !== b.nid ? a.nid - b.nid : a.pid - b.pid);
   const uniqs   = [...new Set(nameRecs.map(r => r.nid))].length;
   const hasEdits = Object.keys(nameEdits).length > 0;
@@ -45,8 +46,6 @@ export function namesBodyHTML(nameRecs, editMode, nameEdits, fileName) {
         <td style="width:40px;text-align:center">${statusCell}</td>
       </tr>`;
   }
-
-  const defaultSaveAs = fileName.replace(/(\.[ot]tf)$/i, '_edited$1') || 'edited.ttf';
 
   return `
   <div class="names-toolbar">
@@ -113,25 +112,36 @@ export function flushInputs(body, nameRecs, nameEdits) {
  * @param {Object}   tablesRaw   - needed by patchAndDownload
  * @param {ArrayBuffer} origBuf
  * @param {string}   fileName
+ * @param {Object}   headState   - { pendingRevision: number|null } — optional
  */
-export function wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName) {
+export function wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName, headState = null) {
   const body = document.getElementById('names-body');
   if (!body) return;
 
-  body.innerHTML = namesBodyHTML(nameRecs, state.editMode, state.nameEdits, fileName);
+  // Build download filename. When a version sync is pending, embed the new
+  // version string so the user doesn't have to rename it manually.
+  // e.g. "MyFont.ttf" + pending 2.002 → "MyFont_v2.002.ttf"
+  const baseName  = fileName.replace(/(\.[ot]tf)$/i, '') || 'font';
+  const ext       = fileName.match(/(\.[ot]tf)$/i)?.[1] || '.ttf';
+  const verSuffix = headState?.pendingRevision != null
+    ? `_v${fixedToString(headState.pendingRevision)}`
+    : '_edited';
+  const defaultSaveAs = baseName + verSuffix + ext;
+
+  body.innerHTML = namesBodyHTML(nameRecs, state.editMode, state.nameEdits, defaultSaveAs);
 
   // ── Edit / Done toggle ───────────────────────────────────────────────────
   body.querySelector('#btn-edit').onclick = () => {
     if (state.editMode) flushInputs(body, nameRecs, state.nameEdits);
     state.editMode = !state.editMode;
-    wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName);
+    wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName, headState);
   };
 
   // ── Reset ────────────────────────────────────────────────────────────────
   body.querySelector('#btn-reset')?.addEventListener('click', () => {
     state.nameEdits = {};
     state.editMode  = false;
-    wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName);
+    wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName, headState);
   });
 
   // ── Live input tracking ──────────────────────────────────────────────────
@@ -159,8 +169,9 @@ export function wireNamesBody(nameRecs, state, tablesRaw, origBuf, fileName) {
   // ── Download ─────────────────────────────────────────────────────────────
   body.querySelector('#btn-dl')?.addEventListener('click', () => {
     flushInputs(body, nameRecs, state.nameEdits);
-    const fn = body.querySelector('#save-fn')?.value || 'edited.ttf';
-    patchAndDownload(origBuf, tablesRaw, state.nameEdits, fn);
+    const fn  = body.querySelector('#save-fn')?.value || 'edited.ttf';
+    const rev = headState?.pendingRevision ?? null;
+    patchAndDownload(origBuf, tablesRaw, state.nameEdits, fn, rev);
   });
 }
 

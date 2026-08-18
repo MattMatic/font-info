@@ -1,6 +1,7 @@
 import { u16, u32, str4 }              from './binary.mjs';
 import { readAllNames, readNamesSimple } from './names.mjs';
 import { parseLayoutTable }              from './layout.mjs';
+import { parseHead }                     from './head.mjs';
 
 /**
  * Parse an OpenType/TrueType font file and return a structured result object.
@@ -44,14 +45,10 @@ export function analyzeFont(buf, fileName) {
     names    = readNamesSimple(v, tablesRaw['name'].off);
   }
 
-  // ── head table (version string fallback) ────────────────────────────────
-  let headVer = '';
-  if (tablesRaw['head']) {
-    const hOff = tablesRaw['head'].off;
-    const maj  = v.getInt16(hOff + 4, false);
-    const min  = v.getUint16(hOff + 6, false);
-    headVer    = `${maj}.${min}`;
-  }
+  // ── head table ───────────────────────────────────────────────────────────
+  const headInfo = tablesRaw['head'] ? parseHead(v, tablesRaw['head'].off) : null;
+  // Fallback version string for identity cards (used if name ID 5 absent)
+  const headVer  = headInfo ? headInfo.fontRevision : '';
 
   // ── layout tables ────────────────────────────────────────────────────────
   const gsub = tablesRaw['GSUB']
@@ -65,6 +62,7 @@ export function analyzeFont(buf, fileName) {
     names,
     nameRecs,
     headVer,
+    headInfo,
     tablesRaw,
     gsub,
     gpos,

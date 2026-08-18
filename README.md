@@ -42,17 +42,19 @@ font-analyzer/
 ├── css/
 │   └── main.css          # All styles
 └── js/
-    ├── main.mjs          # Entry point: file drop, render orchestration
+    ├── main.mjs          # Entry point: file drop, render orchestration, state
     ├── parse/
     │   ├── binary.mjs    # DataView helpers (u16, u32, tableChecksum …)
     │   ├── font.mjs      # analyzeFont — table directory + sub-parser dispatch
+    │   ├── head.mjs      # head table parser, Fixed 16.16 helpers, version sync logic
     │   ├── names.mjs     # name table read, rebuild, and font patching
     │   └── layout.mjs    # GSUB/GPOS lookup parser + complexity scorer
     └── ui/
         ├── constants.mjs # Lookup names, nameID labels, platform maps, groups
         ├── util.mjs      # fmtBytes, esc, nameLabel, langLabel, badgeCls …
-        ├── sections.mjs  # HTML renderers for each page section
-        └── namesUI.mjs   # Accordion body HTML + all names-editor event wiring
+        ├── sections.mjs  # HTML renderers for identity, sizes, layout sections
+        ├── headUI.mjs    # head accordion: field display + version sync panel
+        └── namesUI.mjs   # name accordion body HTML + all editor event wiring
 ```
 
 ## Notes on the name table editor
