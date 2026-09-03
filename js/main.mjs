@@ -16,6 +16,7 @@ import {
   renderIdentity,
   renderTableSizes,
   renderLayoutSummary,
+  renderScriptLangs,
   renderLookupDist,
   renderCtxLookups,
   renderComplexity,
@@ -74,6 +75,7 @@ function render(result) {
   html += namesAccordionShell(nameRecs.length, uniqs);
   html += renderTableSizes(tablesRaw, fileSize);
   html += renderLayoutSummary(gsub, gpos);
+  html += renderScriptLangs(gsub, gpos);
 
   if (gsub && gsub.lookups.length) {
     html += renderLookupDist(gsub.lookups, true);

@@ -1,6 +1,6 @@
 import { fmtBytes, fmtNum, esc, tblGroup, tblGroupBadge, badgeCls } from './util.mjs';
 import { GRP_BADGE } from './constants.mjs';
-import { complexity } from '../parse/layout.mjs';
+import { complexity, mergeScriptMaps } from '../parse/layout.mjs';
 
 // ── identity cards ───────────────────────────────────────────────────────────
 
@@ -257,5 +257,45 @@ export function renderComplexity(gsub, gpos) {
         <ul>${reasons.map(r => `<li>${r}</li>`).join('')}</ul>
       </div>
     </div>
+  </div>`;
+}
+
+// ── script / language table ───────────────────────────────────────────────────
+
+/**
+ * Render the merged GSUB+GPOS script → language tag table.
+ * Each row: script tag | comma-separated language tags.
+ *
+ * @param {Object|null} gsub  - parsed GSUB table (has .scriptMap)
+ * @param {Object|null} gpos  - parsed GPOS table (has .scriptMap)
+ */
+export function renderScriptLangs(gsub, gpos) {
+  if (!gsub && !gpos) return '';
+
+  const merged = mergeScriptMaps(
+    gsub ? gsub.scriptMap : null,
+    gpos ? gpos.scriptMap : null,
+  );
+
+  if (!merged.size) return '';
+
+  const rows = [...merged.entries()].map(([script, langs]) => `
+    <tr>
+      <td><span class="mono" style="font-weight:500">${script}</span></td>
+      <td class="mono" style="color:#444">${langs.join(', ')}</td>
+    </tr>`).join('');
+
+  return `
+  <div class="section">
+    <div class="section-title">Scripts &amp; languages
+      <span style="font-size:11px;font-weight:400;color:#999;margin-left:4px">merged GSUB + GPOS &middot; ${merged.size} script${merged.size !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th style="width:120px;cursor:default">Script</th>
+        <th style="cursor:default">Language tags</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
   </div>`;
 }
