@@ -2,6 +2,7 @@ import { u16, u32, str4 }              from './binary.mjs';
 import { readAllNames, readNamesSimple } from './names.mjs';
 import { parseLayoutTable }              from './layout.mjs';
 import { parseHead }                     from './head.mjs';
+import { readGlyphs }                    from './glyphs.mjs';
 
 /**
  * Parse an OpenType/TrueType font file and return a structured result object.
@@ -58,7 +59,12 @@ export function analyzeFont(buf, fileName) {
     ? parseLayoutTable(v, tablesRaw['GPOS'].off, 'GPOS')
     : null;
 
+  // ── glyphs (cmap + names + outlines) ─────────────────────────────────────
+  let glyphs = null;
+  try { glyphs = readGlyphs(v, tablesRaw, headInfo); } catch { /* non-fatal */ }
+
   return {
+    glyphs,
     names,
     nameRecs,
     headVer,
