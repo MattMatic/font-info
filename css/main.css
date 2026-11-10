@@ -261,6 +261,49 @@ table.ntbl tr.edited td.vc input { border-color: #1a7a52; }
 #head-body table tbody td { border-bottom: 0.5px solid #e8e8e4; }
 #head-body table tbody tr:last-child td { border-bottom: none; }
 
+/* ── glyph view ────────────────────────────────────────────────────────────── */
+.gl-tbl th { cursor: default; }
+.gl-row { cursor: pointer; }
+.gl-row.open td { background: #f0f0ec; }
+.gl-cell { width: 56px; padding: 3px 12px; }
+.gl-svg { display: block; color: #1a1a1a; background: #fafaf8; border-radius: 4px; }
+.gl-base   { stroke: #e03131; stroke-width: 0.75; }
+.gl-origin { stroke: #888;    stroke-width: 0.75; stroke-dasharray: 1 2; }
+.gl-uni + .gl-uni { margin-left: 10px; }
+
+/* grid view */
+.gl-seg { display: inline-flex; }
+.gl-seg button { border-radius: 0; }
+.gl-seg button:first-child { border-radius: 6px 0 0 6px; }
+.gl-seg button:last-child  { border-radius: 0 6px 6px 0; margin-left: -0.5px; }
+.gl-grid { table-layout: fixed; }
+.gl-grid th.gl-rh, .gl-grid td.gl-rh { width: 64px; text-align: right; color: #888; background: #f5f5f2; }
+.gl-grid th.gl-ch { text-align: center; padding: 5px 0; font-family: ui-monospace, monospace; }
+.gl-gcell { padding: 3px; text-align: center; border-left: 0.5px solid #ececE6; cursor: default; }
+.gl-gcell .gl-svg { margin: 0 auto; }
+.gl-gcell:hover { background: #e6eefb !important; }
+.gl-gcell.sel { background: #dbe7fb !important; outline: 1.5px solid #378ADD; outline-offset: -1.5px; }
+.gl-gcell.dim .gl-svg, .gl-gcell.dim .gl-none { opacity: 0.12; }
+.gl-sel-panel { padding: 10px 12px; background: #f5f5f2; border-bottom: 0.5px solid #e0e0d8; }
+.gl-pop {
+  position: fixed; z-index: 1000; display: none; pointer-events: none;
+  background: #fff; border: 0.5px solid #bbb; border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.18); padding: 10px 12px; max-width: 420px;
+}
+.gl-none {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px dashed #ccc; border-radius: 4px; color: #bbb; font-size: 12px;
+}
+.gl-char { font-size: 16px; margin-left: 2px; }
+.gl-detail td { background: #f5f5f2 !important; padding: 10px 12px; }
+.gl-detail-in { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.gl-q, .gl-sel {
+  font-size: 12px; padding: 4px 8px; border: 0.5px solid #bbb;
+  border-radius: 6px; font-family: inherit; background: #fff;
+}
+.gl-q { width: 220px; }
+.names-toolbar button:disabled { opacity: 0.4; cursor: default; }
+
 /* ── version sync panel ─────────────────────────────────────────────────────── */
 .head-sync-panel {
   border-top: 0.5px solid #e0e0d8;

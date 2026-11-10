@@ -30,6 +30,10 @@ import {
   headAccordionShell,
   wireHeadBody,
 }                           from './ui/headUI.mjs';
+import {
+  glyphsAccordionShell,
+  wireGlyphsBody,
+}                           from './ui/glyphsUI.mjs';
 
 // ── per-font mutable state ───────────────────────────────────────────────────
 
@@ -56,7 +60,7 @@ function render(result) {
   namesState = { editMode: false, nameEdits: {} };
   headState  = { pendingRevision: null };
 
-  const { names, nameRecs, headVer, headInfo, tablesRaw, gsub, gpos, fileSize, fileName, origBuf } = result;
+  const { glyphs, names, nameRecs, headVer, headInfo, tablesRaw, gsub, gpos, fileSize, fileName, origBuf } = result;
   const uniqs    = [...new Set(nameRecs.map(r => r.nid))].length;
   const syncInfo = detectVersionSync(headInfo, names);
 
@@ -73,6 +77,7 @@ function render(result) {
   html += renderIdentity(names, headVer, tablesRaw, fileSize);
   html += headAccordionShell();
   html += namesAccordionShell(nameRecs.length, uniqs);
+  if (glyphs) html += glyphsAccordionShell(glyphs.numGlyphs);
   html += renderTableSizes(tablesRaw, fileSize);
   html += renderLayoutSummary(gsub, gpos);
   html += renderScriptLangs(gsub, gpos);
@@ -128,6 +133,22 @@ function render(result) {
   document.addEventListener('font-namesedits-changed', () => {
     if (namesOpen) wireNamesBody(nameRecs, namesState, tablesRaw, origBuf, fileName, headState);
   }, { signal: abortController.signal });
+
+  // ── wire glyphs accordion (collapsed; rendered on first open) ─────────────
+  if (glyphs) {
+    const glyphsHdr  = document.getElementById('glyphs-hdr');
+    const glyphsBody = document.getElementById('glyphs-body');
+    const glyphsState = { q: '', filter: 'all', view: 'grid', page: 0, open: new Set(), sel: null, rows: null };
+    let glyphsOpen = false;
+
+    glyphsHdr.addEventListener('click', () => {
+      glyphsOpen = !glyphsOpen;
+      glyphsHdr.classList.toggle('open', glyphsOpen);
+      glyphsHdr.querySelector('.chevron').style.transform = glyphsOpen ? 'rotate(90deg)' : '';
+      glyphsBody.style.display = glyphsOpen ? 'block' : 'none';
+      if (glyphsOpen) wireGlyphsBody(glyphs, headInfo, glyphsState);
+    });
+  }
 
   // ── wire size-table sort ─────────────────────────────────────────────────
   attachSizeSort(tablesRaw, fileSize);
