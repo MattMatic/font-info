@@ -279,11 +279,17 @@ table.ntbl tr.edited td.vc input { border-color: #1a7a52; }
 .gl-grid { table-layout: fixed; }
 .gl-grid th.gl-rh, .gl-grid td.gl-rh { width: 64px; text-align: right; color: #888; background: #f5f5f2; }
 .gl-grid th.gl-ch { text-align: center; padding: 5px 0; font-family: ui-monospace, monospace; }
-.gl-gcell { padding: 3px; text-align: center; border-left: 0.5px solid #ececE6; cursor: default; }
+.gl-gcell { position: relative; padding: 3px; text-align: center; border-left: 0.5px solid #ececE6; cursor: default; }
 .gl-gcell .gl-svg { margin: 0 auto; }
 .gl-gcell:hover { background: #e6eefb !important; }
 .gl-gcell.sel { background: #dbe7fb !important; outline: 1.5px solid #378ADD; outline-offset: -1.5px; }
 .gl-gcell.dim .gl-svg, .gl-gcell.dim .gl-none { opacity: 0.12; }
+.gl-mk {
+  position: absolute; top: 2px; font-family: ui-monospace, monospace;
+  font-size: 9px; line-height: 1; padding: 1px 3px; border-radius: 3px; font-weight: 600;
+}
+.gl-mk-cls  { left: 2px; }
+.gl-mk-zero { right: 2px; background: #FAECE7; color: #712B13; }
 .gl-sel-panel { padding: 10px 12px; background: #f5f5f2; border-bottom: 0.5px solid #e0e0d8; }
 .gl-pop {
   position: fixed; z-index: 1000; display: none; pointer-events: none;

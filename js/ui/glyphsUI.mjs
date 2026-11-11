@@ -34,6 +34,28 @@ function glyphSVG(d, vb, size) {
   </svg>`;
 }
 
+/** GDEF glyph classes: value → label, badge colour, one-letter grid marker. */
+const GLYPH_CLASSES = {
+  1: { label: 'Base',      badge: 'b-blue',   letter: 'B' },
+  2: { label: 'Ligature',  badge: 'b-teal',   letter: 'L' },
+  3: { label: 'Mark',      badge: 'b-amber',  letter: 'M' },
+  4: { label: 'Component', badge: 'b-gray',   letter: 'C' },
+};
+
+function classHTML(r) {
+  if (r.cls === null) return '<span style="color:#ccc" title="No GDEF glyph classes">—</span>';
+  const c = GLYPH_CLASSES[r.cls];
+  return c ? `<span class="badge ${c.badge}">${c.label}</span>`
+           : '<span style="color:#bbb;font-size:12px" title="Unclassified in GDEF">none</span>';
+}
+
+function advanceHTML(r) {
+  if (r.adv === null) return '<span style="color:#ccc">—</span>';
+  return r.adv === 0
+    ? '<span class="badge b-coral" title="Zero advance width">0</span>'
+    : String(r.adv);
+}
+
 /** Large preview + full detail; used by the click-to-expand row and the hover popover. */
 function previewHTML(g, r, vb) {
   const all = r.cps.map(cp =>
@@ -45,6 +67,8 @@ function previewHTML(g, r, vb) {
       <div>
         <div style="font-size:12px;color:#666;margin-bottom:6px">GID <span class="mono" style="color:#1a1a1a">${r.gid}</span>
           &middot; name <span class="mono" style="color:#1a1a1a">${r.name ? esc(r.name) : '—'}</span></div>
+        <div style="font-size:12px;color:#666;margin-bottom:6px">Class ${classHTML(r)}
+          &middot; advance <span class="mono" style="color:#1a1a1a">${advanceHTML(r)}</span></div>
         <div style="font-size:12px;color:#666;margin-bottom:4px">Unicode (cmap)</div>
         <div>${all}</div>
       </div>
@@ -77,7 +101,13 @@ function placePopover(el, e) {
 function buildRows(g) {
   const rows = new Array(g.numGlyphs);
   for (let gid = 0; gid < g.numGlyphs; gid++) {
-    rows[gid] = { gid, name: g.names?.[gid] ?? '', cps: g.byGid.get(gid) ?? [] };
+    rows[gid] = {
+      gid,
+      name: g.names?.[gid] ?? '',
+      cps:  g.byGid.get(gid) ?? [],
+      cls:  g.classes  ? g.classes[gid]  : null,   // GDEF class (0 = unclassified)
+      adv:  g.advances ? g.advances[gid] : null,   // hmtx advance width
+    };
   }
   return rows;
 }
@@ -86,6 +116,7 @@ function matches(row, q) {
   if (!q) return true;
   const s = q.toLowerCase();
   if (row.name.toLowerCase().includes(s)) return true;
+  if (row.cls && GLYPH_CLASSES[row.cls]?.label.toLowerCase() === s) return true;
   if (String(row.gid) === s) return true;
   const hex = s.replace(/^u\+?/, '');
   if (/^[0-9a-f]+$/.test(hex) && row.cps.some(cp => cp.toString(16).includes(hex))) return true;
@@ -114,7 +145,9 @@ export function wireGlyphsBody(g, headInfo, state) {
 
   const isMatch = r =>
     (state.filter === 'mapped'   ? r.cps.length > 0 :
-     state.filter === 'unmapped' ? r.cps.length === 0 : true) && matches(r, state.q);
+     state.filter === 'unmapped' ? r.cps.length === 0 :
+     state.filter === 'zero'     ? r.adv === 0 :
+     state.filter === 'marks'    ? r.cls === 3 : true) && matches(r, state.q);
   const filtered = all.filter(isMatch);
   const grid = state.view === 'grid';
 
@@ -140,7 +173,12 @@ export function wireGlyphsBody(g, headInfo, state) {
         const gid = rs + c;
         if (gid >= g.numGlyphs) { tds += '<td class="gl-gcell gl-empty"></td>'; continue; }
         const dim = filtering && !isMatch(all[gid]);
-        tds += `<td class="gl-gcell${dim ? ' dim' : ''}${state.sel === gid ? ' sel' : ''}" data-gid="${gid}">${glyphSVG(g.pathOf(gid), vb, 44)}</td>`;
+        const r = all[gid];
+        const cl = r.cls ? GLYPH_CLASSES[r.cls] : null;
+        // Corner markers: class letter (top-left), zero advance "0" (top-right).
+        const mk = (cl ? `<span class="gl-mk gl-mk-cls ${cl.badge}" title="${cl.label}">${cl.letter}</span>` : '') +
+                   (r.adv === 0 ? '<span class="gl-mk gl-mk-zero" title="Zero advance width">0</span>' : '');
+        tds += `<td class="gl-gcell${dim ? ' dim' : ''}${state.sel === gid ? ' sel' : ''}" data-gid="${gid}">${mk}${glyphSVG(g.pathOf(gid), vb, 44)}</td>`;
       }
       trs += `<tr>${tds}</tr>`;
     }
@@ -163,15 +201,18 @@ export function wireGlyphsBody(g, headInfo, state) {
         <td class="num" style="width:70px">${r.gid}</td>
         <td class="mono">${r.name ? esc(r.name) : '<span style="color:#ccc">—</span>'}</td>
         <td>${uni}</td>
+        <td>${classHTML(r)}</td>
+        <td class="num">${advanceHTML(r)}</td>
       </tr>`;
     if (open) {
-      rows += `<tr class="gl-detail"><td colspan="4">${previewHTML(g, r, vb)}</td></tr>`;
+      rows += `<tr class="gl-detail"><td colspan="6">${previewHTML(g, r, vb)}</td></tr>`;
     }
   }
 
   const info =
     `${fmtNum(g.numGlyphs)} glyphs &middot; ${fmtNum(g.mappedGlyphs)} mapped via cmap` +
     (g.names ? '' : ' &middot; no glyph names') +
+    (g.classes ? '' : ' &middot; no GDEF classes') +
     (g.kind === null ? ' &middot; no outlines' : '') +
     (g.notes.length ? ` &middot; <span style="color:#8a5c00">${esc(g.notes.join('; '))}</span>` : '');
 
@@ -189,6 +230,8 @@ export function wireGlyphsBody(g, headInfo, state) {
           <option value="all"${state.filter === 'all' ? ' selected' : ''}>All glyphs</option>
           <option value="mapped"${state.filter === 'mapped' ? ' selected' : ''}>Mapped</option>
           <option value="unmapped"${state.filter === 'unmapped' ? ' selected' : ''}>Unmapped</option>
+          <option value="marks"${state.filter === 'marks' ? ' selected' : ''}>Marks (GDEF)</option>
+          <option value="zero"${state.filter === 'zero' ? ' selected' : ''}>Zero advance</option>
         </select>
       </div>
     </div>
@@ -201,8 +244,10 @@ export function wireGlyphsBody(g, headInfo, state) {
           <th style="cursor:default">GID</th>
           <th style="cursor:default">Name</th>
           <th style="cursor:default">Unicode</th>
+          <th style="cursor:default">Class</th>
+          <th style="cursor:default;text-align:right">Advance</th>
         </tr></thead>
-        <tbody>${rows || '<tr><td colspan="4" style="padding:1rem;color:#888">No matching glyphs.</td></tr>'}</tbody>
+        <tbody>${rows || '<tr><td colspan="6" style="padding:1rem;color:#888">No matching glyphs.</td></tr>'}</tbody>
       </table>`}
     </div>
     <div class="names-toolbar" style="border-top:0.5px solid #e0e0d8;border-bottom:none">
