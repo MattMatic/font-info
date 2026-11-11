@@ -3,6 +3,7 @@ import { parseCmap }      from './cmap.mjs';
 import { parsePostNames } from './post.mjs';
 import { parseCFF }       from './cff.mjs';
 import { makeGlyfReader } from './glyf.mjs';
+import { parseGlyphClasses, parseAdvances } from './metrics.mjs';
 
 /**
  * Gather everything the glyph view needs: GID count, names, cmap reverse map
@@ -48,6 +49,14 @@ export function readGlyphs(v, tablesRaw, headInfo) {
     catch { notes.push('cmap parse failed'); }
   }
 
+  let classes = null, advances = null;
+  if (tablesRaw['GDEF']) {
+    try { classes = parseGlyphClasses(v, tablesRaw['GDEF'].off, numGlyphs); } catch { /* ignore */ }
+  }
+  if (tablesRaw['hmtx'] && tablesRaw['hhea']) {
+    try { advances = parseAdvances(v, tablesRaw['hmtx'].off, tablesRaw['hhea'].off, numGlyphs); } catch { /* ignore */ }
+  }
+
   const cache = new Map();
   const pathOf = gid => {
     if (!rawPath) return null;
@@ -62,6 +71,8 @@ export function readGlyphs(v, tablesRaw, headInfo) {
     byGid: cmap.byGid,           // Map<gid, number[]>
     mappedGlyphs: cmap.byGid.size,
     codePoints: cmap.count,
+    classes,                     // Uint8Array | null  (GDEF: 1 base, 2 lig, 3 mark, 4 comp)
+    advances,                    // Uint16Array | null (hmtx advance widths)
     kind,                        // 'glyf' | 'CFF' | null
     notes,
     pathOf,
