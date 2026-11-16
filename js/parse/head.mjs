@@ -111,7 +111,8 @@ export function parseHead(v, off) {
  * substring and return an object describing the sync state.
  *
  * We search nameIDs 5 (Version string) and 3 (Unique ID) only, matching
- * the exact decimal string produced by fixedToString().
+ * the exact decimal string produced by fixedToString(). Name ID 3 falls back
+ * to its leading version number when that differs from head.fontRevision.
  *
  * @returns {{
  *   currentStr: string,   // e.g. "2.001"
@@ -132,8 +133,23 @@ export function detectVersionSync(headInfo, names) {
     const val = names[nid];
     if (!val) continue;
     const idx = val.indexOf(needle);
-    if (idx === -1) continue;
-    matches.push({ nid, label, originalValue: val, matchStart: idx, matchEnd: idx + needle.length });
+    if (idx !== -1) {
+      matches.push({ nid, label, originalValue: val, matchStart: idx, matchEnd: idx + needle.length });
+      continue;
+    }
+    // Unique ID (nid 3) is always updated, even when its version differs from
+    // head.fontRevision (e.g. "1.000;NONE;Font-Regular" vs revision 2.000):
+    // replace its leading version number.
+    if (nid === 3) {
+      const m = /^\s*\d+(?:\.\d+)?/.exec(val);
+      if (m) {
+        const start = m[0].length - m[0].trimStart().length;
+        matches.push({
+          nid, label: label + ' (mismatched)', originalValue: val,
+          matchStart: start, matchEnd: m[0].length,
+        });
+      }
+    }
   }
 
   return { currentStr: needle, matches };
